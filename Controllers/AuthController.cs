@@ -28,7 +28,6 @@ namespace EmailAuth.Controllers
             _identityWs = identityWs;
         }
 
-        [HttpPost]
         public async Task<IActionResult> Index()
         {
             switch (Request.Headers["Auth-Method"])
