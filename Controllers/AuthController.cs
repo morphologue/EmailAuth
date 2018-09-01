@@ -23,7 +23,7 @@ namespace EmailAuth.Controllers
         {
             _log = log;
             _aliasSuffix = config["IdentityWsAliasSuffix"];
-            _aliasSuffix = config["IdentityWsClientName"];
+            _clientName = config["IdentityWsClientName"];
             _proxyDests = config.GetSection("ProxyDestinations").Get<List<ProxyDestination>>();
             _identityWs = identityWs;
         }
