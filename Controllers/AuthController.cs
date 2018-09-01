@@ -11,17 +11,19 @@ namespace EmailAuth.Controllers
 {
     public class AuthController : Controller
     {
-        private const string ALIAS_SUFFIX = "@gavin-tech.com";
-        private const string CLIENT_NAME = "mail";
         private const string VAGUERY = "Invalid login attempt";
 
         private readonly ILogger<AuthController> _log;
+        private readonly string _aliasSuffix;
+        private readonly string _clientName;
         private readonly List<ProxyDestination> _proxyDests;
         private readonly IdentityWs _identityWs;
 
         public AuthController(ILogger<AuthController> log, IConfiguration config, IdentityWs identityWs)
         {
             _log = log;
+            _aliasSuffix = config["IdentityWsAliasSuffix"];
+            _aliasSuffix = config["IdentityWsClientName"];
             _proxyDests = config.GetSection("ProxyDestinations").Get<List<ProxyDestination>>();
             _identityWs = identityWs;
         }
@@ -74,7 +76,7 @@ namespace EmailAuth.Controllers
                 return AuthStatus();
             }
 
-            string emailAddress = $"{username}{ALIAS_SUFFIX}";
+            string emailAddress = $"{username}{_aliasSuffix}";
             Alias alias = await _identityWs.GetAliasAsync(emailAddress);
             if (alias == null)
             {
@@ -82,10 +84,10 @@ namespace EmailAuth.Controllers
                 return AuthStatus();
             }
 
-            Client client = await alias.GetClientAsync(CLIENT_NAME);
+            Client client = await alias.GetClientAsync(_clientName);
             if (client == null)
             {
-                _log.LogInformation("Client {CLIENT_NAME} not found in Alias {emailAddress}", CLIENT_NAME, emailAddress);
+                _log.LogInformation("Client {CLIENT_NAME} not found in Alias {emailAddress}", _clientName, emailAddress);
                 return AuthStatus();
             }
 
