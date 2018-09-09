@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using EmailAuth.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -33,7 +35,7 @@ namespace EmailAuth.Controllers
             switch (Request.Headers["Auth-Method"])
             {
                 case "none":
-                    return HandleAnonymousConnection();
+                    return await HandleAnonymousConnectionAsync();
                 case "plain":
                     return await HandleIdentifiedConnectionAsync();
                 default:
@@ -42,7 +44,7 @@ namespace EmailAuth.Controllers
             }
         }
 
-        private IActionResult HandleAnonymousConnection()
+        private async Task<IActionResult> HandleAnonymousConnectionAsync()
         {
             string protocol = Request.Headers["Auth-Protocol"];
             ProxyDestination dest = _proxyDests.FirstOrDefault(d => d.Protocol == protocol && !d.Authenticated);
@@ -52,7 +54,7 @@ namespace EmailAuth.Controllers
                 return AuthStatus();
             }
 
-            Response.Headers["Auth-Server"] = dest.Host;
+            Response.Headers["Auth-Server"] = await DnsLookupAsync(dest.Host);
             Response.Headers["Auth-Port"] = dest.Port.ToString();
             return AuthStatus("OK");
         }
@@ -100,7 +102,7 @@ namespace EmailAuth.Controllers
                 return AuthStatus();
             }
 
-            Response.Headers["Auth-Server"] = dest.Host;
+            Response.Headers["Auth-Server"] = await DnsLookupAsync(dest.Host);
             Response.Headers["Auth-Port"] = dest.Port.ToString();
             return AuthStatus("OK");
         }
@@ -109,6 +111,22 @@ namespace EmailAuth.Controllers
         {
             Response.Headers["Auth-Status"] = errorMessage;
             return Ok();
+        }
+
+        private async Task<string> DnsLookupAsync(string hostname)
+        {
+            string result = (await Dns.GetHostAddressesAsync(hostname))
+                .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)
+                .FirstOrDefault()
+                ?.ToString();
+
+            if (result == null)
+            {
+                _log.LogError("Could not resolve hostname {hostname}", hostname);
+                return hostname;
+            }
+
+            return result;
         }
     }
 }
